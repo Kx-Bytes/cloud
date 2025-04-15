@@ -3,3 +3,4 @@ hashlib
 io
 streamlit
 os
+firebase-admin
