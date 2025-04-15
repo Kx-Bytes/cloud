@@ -3,7 +3,7 @@ import hashlib
 import streamlit as st
 from PIL import Image
 import io
-
+import json
 import firebase_admin
 from firebase_admin import credentials, storage
 
@@ -20,7 +20,8 @@ hashes_collection = mongo_db["image_hashes"]
 
 # Firebase Initialization
 if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey.json")
+    # Initialize Firebase using secrets from secrets.toml
+    cred = credentials.Certificate(json.loads(st.secrets["firebase_service_account"]))
     firebase_admin.initialize_app(cred, {
         'storageBucket': 'cloud-2f36e.firebasestorage.app'
     })
