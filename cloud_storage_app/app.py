@@ -21,7 +21,7 @@ hashes_collection = mongo_db["image_hashes"]
 # Firebase Initialization
 if not firebase_admin._apps:
     # Initialize Firebase using secrets from secrets.toml
-    cred = credentials.Certificate(json.loads(st.secrets["firebase_service_account"]))
+    cred = credentials.Certificate(st.secrets["firebase_service_account"])
     firebase_admin.initialize_app(cred, {
         'storageBucket': 'cloud-2f36e.firebasestorage.app'
     })
