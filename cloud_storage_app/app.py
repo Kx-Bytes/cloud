@@ -17,16 +17,18 @@ try:
     client = MongoClient(
         MONGO_URI,
         tls=True,
-        tlsAllowInvalidCertificates=False,
+        tlsAllowInvalidCertificates=True,  # Temporary for testing
         retryWrites=True,
         w="majority",
         connectTimeoutMS=30000,
         socketTimeoutMS=30000,
         serverSelectionTimeoutMS=30000
     )
-    client.admin.command('ping')  # Test connection
+    # Test the connection
+    client.admin.command('ping')
     mongo_db = client["cloud_storage_db"]
     hashes_collection = mongo_db["image_hashes"]
+    st.success("Connected to MongoDB successfully!")
 except Exception as e:
     st.error(f"Failed to connect to MongoDB: {str(e)}")
     st.stop()
