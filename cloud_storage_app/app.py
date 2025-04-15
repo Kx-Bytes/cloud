@@ -13,21 +13,19 @@ import cloudinary.uploader
 import requests
 
 # MongoDB Initialization
+# MongoDB Initialization
 MONGO_URI = st.secrets["mongo_uri"]
 try:
     client = MongoClient(
         MONGO_URI,
-        tls=True,
-        tlsAllowInvalidCertificates=False,
-        tlsInsecure=False,
+        tls=True,  # Use TLS
+        tlsAllowInvalidCertificates=False,  # Require valid certificates
+        tlsCAFile='path/to/ca-certificate.crt',  # Path to CA certificate
         retryWrites=True,
         w="majority",
         connectTimeoutMS=30000,
         socketTimeoutMS=30000,
-        serverSelectionTimeoutMS=30000,
-        ssl=True,
-        ssl_cert_reqs='CERT_REQUIRED',
-        ssl_ca_certs='path/to/ca-certificate.crt'  # Download from MongoDB Atlas
+        serverSelectionTimeoutMS=30000
     )
     # Test connection with a lightweight command
     client.admin.command('ping')
