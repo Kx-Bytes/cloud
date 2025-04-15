@@ -1,6 +1,9 @@
-Pillow
 hashlib
 io
-streamlit
 os
+streamlit
+Pillow
 firebase-admin
+pymongo
+cloudinary
+requests
