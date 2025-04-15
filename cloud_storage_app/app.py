@@ -11,6 +11,8 @@ from pymongo import MongoClient
 import cloudinary
 import cloudinary.uploader
 import requests
+import certifi  # Add this import at the top of your file
+from pymongo import MongoClient
 
 # MongoDB Initialization
 # MongoDB Initialization
@@ -18,16 +20,15 @@ MONGO_URI = st.secrets["mongo_uri"]
 try:
     client = MongoClient(
         MONGO_URI,
-        tls=True,  # Use TLS
-        tlsAllowInvalidCertificates=False,  # Require valid certificates
-        tlsCAFile='path/to/ca-certificate.crt',  # Path to CA certificate
+        tls=True,
+        tlsCAFile=certifi.where(),  # Uses system CA certificates
         retryWrites=True,
         w="majority",
         connectTimeoutMS=30000,
         socketTimeoutMS=30000,
         serverSelectionTimeoutMS=30000
     )
-    # Test connection with a lightweight command
+    # Test connection
     client.admin.command('ping')
     mongo_db = client["cloud_storage_db"]
     hashes_collection = mongo_db["image_hashes"]
