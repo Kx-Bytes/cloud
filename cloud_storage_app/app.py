@@ -45,7 +45,6 @@ class CloudinaryStorage(StorageBackend):
             api_key=st.secrets["cloudinary"]["api_key"],
             api_secret=st.secrets["cloudinary"]["api_secret"]
         )
-
     def exists(self, filename):
         return False
 
@@ -288,4 +287,62 @@ def main():
             logout_button = st.button("Logout")
 
             if logout_button:
-                for
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.rerun()
+
+    if st.session_state.get("authenticated", False):
+        tab1, tab2 = st.tabs(["📤 Upload Images", "📁 View Images"])
+
+        with tab1:
+            st.header("Upload New Image")
+            uploaded_file = st.file_uploader("Choose an image", type=['jpg', 'jpeg', 'png', 'gif', 'bmp'])
+            if uploaded_file is not None:
+                try:
+                    image = Image.open(uploaded_file)
+                    st.image(image, caption="Preview", width=300)
+                    if st.button("Upload Image"):
+                        uploaded_file.seek(0)
+                        result = upload_image(
+                            st.session_state.username,
+                            uploaded_file.getvalue(),
+                            uploaded_file.name
+                        )
+                        st.success(result)
+                except Exception as e:
+                    st.error(f"Error processing image: {str(e)}")
+
+        with tab2:
+            st.header("Your Uploaded Images")
+
+            if st.button("🔄 Cleanup Broken Links"):
+                cleanup_invalid_images(st.session_state.username)
+                st.success("Cleaned up broken image links.")
+                st.rerun()
+
+            images = get_user_images(st.session_state.username)
+            if not images:
+                st.info("You haven't uploaded any images yet.")
+            else:
+                cols = st.columns(3)
+                for idx, (img_name, public_url) in enumerate(images):
+                    with cols[idx % 3]:
+                        try:
+                            if public_url.startswith('http'):
+                                st.image(public_url, caption=img_name, use_container_width=True)
+                            else:
+                                storage_backend = LocalStorage(STORAGE_FOLDER)
+                                img_data = storage_backend.get_image_data(img_name)
+                                if img_data:
+                                    st.image(img_data, caption=img_name, use_container_width=True)
+                                else:
+                                    st.error(f"Could not load image: {img_name}")
+                            st.markdown(f"[Open]({public_url})", unsafe_allow_html=True)
+                        except Exception as e:
+                            st.error(f"Error displaying image: {str(e)}")
+
+    else:
+        st.info("Please login or register to use the app.")
+
+if __name__ == "__main__":
+    main()
