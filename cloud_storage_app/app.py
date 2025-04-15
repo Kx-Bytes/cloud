@@ -12,25 +12,30 @@ import cloudinary
 import cloudinary.uploader
 import requests
 
+# MongoDB Initialization
 MONGO_URI = st.secrets["mongo_uri"]
 try:
     client = MongoClient(
         MONGO_URI,
         tls=True,
-        tlsAllowInvalidCertificates=True,  # Temporary for testing
+        tlsAllowInvalidCertificates=False,
+        tlsInsecure=False,
         retryWrites=True,
         w="majority",
         connectTimeoutMS=30000,
         socketTimeoutMS=30000,
-        serverSelectionTimeoutMS=30000
+        serverSelectionTimeoutMS=30000,
+        ssl=True,
+        ssl_cert_reqs='CERT_REQUIRED',
+        ssl_ca_certs='path/to/ca-certificate.crt'  # Download from MongoDB Atlas
     )
-    # Test the connection
+    # Test connection with a lightweight command
     client.admin.command('ping')
     mongo_db = client["cloud_storage_db"]
     hashes_collection = mongo_db["image_hashes"]
-    st.success("Connected to MongoDB successfully!")
+    st.success("✅ MongoDB connection established successfully")
 except Exception as e:
-    st.error(f"Failed to connect to MongoDB: {str(e)}")
+    st.error(f"❌ MongoDB connection failed: {str(e)}")
     st.stop()
 
 # Firebase Initialization
