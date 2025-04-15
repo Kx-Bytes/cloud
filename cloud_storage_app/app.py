@@ -19,18 +19,34 @@ mongo_db = client["cloud_storage_db"]
 hashes_collection = mongo_db["image_hashes"]
 
 # Firebase Initialization
+# Firebase Initialization
 if not firebase_admin._apps:
     try:
-        # Create temp file for Firebase credentials
+        # Create credentials dictionary from secrets
+        firebase_config = {
+            "type": st.secrets["firebase_credentials"]["type"],
+            "project_id": st.secrets["firebase_credentials"]["project_id"],
+            "private_key_id": st.secrets["firebase_credentials"]["private_key_id"],
+            "private_key": st.secrets["firebase_credentials"]["private_key"],
+            "client_email": st.secrets["firebase_credentials"]["client_email"],
+            "client_id": st.secrets["firebase_credentials"]["client_id"],
+            "auth_uri": st.secrets["firebase_credentials"]["auth_uri"],
+            "token_uri": st.secrets["firebase_credentials"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["firebase_credentials"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["firebase_credentials"]["client_x509_cert_url"],
+            "universe_domain": st.secrets["firebase_credentials"]["universe_domain"]
+        }
+        
+        # Create temp file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp:
-            json.dump(json.loads(st.secrets["firebase_credentials"]), temp)
+            json.dump(firebase_config, temp)
             temp_path = temp.name
         
         cred = credentials.Certificate(temp_path)
         firebase_admin.initialize_app(cred, {
             'storageBucket': st.secrets["firebase"]["storage_bucket"]
         })
-        os.unlink(temp_path)  # Delete temp file
+        os.unlink(temp_path)  # Clean up temp file
     except Exception as e:
         st.error(f"Firebase initialization failed: {str(e)}")
         st.stop()
