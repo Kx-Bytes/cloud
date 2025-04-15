@@ -12,11 +12,24 @@ import cloudinary
 import cloudinary.uploader
 import requests
 
-# MongoDB Initialization
 MONGO_URI = st.secrets["mongo_uri"]
-client = MongoClient(MONGO_URI)
-mongo_db = client["cloud_storage_db"]
-hashes_collection = mongo_db["image_hashes"]
+try:
+    client = MongoClient(
+        MONGO_URI,
+        tls=True,
+        tlsAllowInvalidCertificates=False,
+        retryWrites=True,
+        w="majority",
+        connectTimeoutMS=30000,
+        socketTimeoutMS=30000,
+        serverSelectionTimeoutMS=30000
+    )
+    client.admin.command('ping')  # Test connection
+    mongo_db = client["cloud_storage_db"]
+    hashes_collection = mongo_db["image_hashes"]
+except Exception as e:
+    st.error(f"Failed to connect to MongoDB: {str(e)}")
+    st.stop()
 
 # Firebase Initialization
 if not firebase_admin._apps:
@@ -64,13 +77,18 @@ class StorageBackend:
     def get_url(self, filename): pass
     def get_image_data(self, filename): pass
 
+
 class CloudinaryStorage(StorageBackend):
     def __init__(self):
-        cloudinary.config(
-            cloud_name=st.secrets["cloudinary"]["cloud_name"],
-            api_key=st.secrets["cloudinary"]["api_key"],
-            api_secret=st.secrets["cloudinary"]["api_secret"]
-        )
+        try:
+            cloudinary.config(
+                cloud_name=st.secrets["cloudinary"]["cloud_name"],
+                api_key=st.secrets["cloudinary"]["api_key"],
+                api_secret=st.secrets["cloudinary"]["api_secret"]
+            )
+        except Exception as e:
+            st.error(f"Cloudinary configuration failed: {str(e)}")
+            raise
     def exists(self, filename):
         return False
 
@@ -369,5 +387,6 @@ def main():
 
     else:
         st.info("Please login or register to use the app.")
-
-main()
+        
+if __name__ == "__main__":
+    main()
