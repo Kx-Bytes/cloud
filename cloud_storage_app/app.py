@@ -14,6 +14,7 @@ import requests
 import certifi  # Add this import at the top of your file
 from pymongo import MongoClient
 
+st.set_page_config(page_title="Cloud Storage App", page_icon="☁️", layout="wide")
 # MongoDB Initialization
 # MongoDB Initialization
 MONGO_URI = st.secrets["mongo_uri"]
