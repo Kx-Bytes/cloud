@@ -4,9 +4,9 @@ import streamlit as st
 from PIL import Image
 import io
 import json
+import tempfile
 import firebase_admin
 from firebase_admin import credentials, storage
-
 from pymongo import MongoClient
 import cloudinary
 import cloudinary.uploader
@@ -20,14 +20,31 @@ hashes_collection = mongo_db["image_hashes"]
 
 # Firebase Initialization
 if not firebase_admin._apps:
-    # Initialize Firebase using secrets from secrets.toml
-    cred = credentials.Certificate(st.secrets["firebase_service_account"])
-    firebase_admin.initialize_app(cred, {
-        'storageBucket': 'cloud-2f36e.firebasestorage.app'
-    })
+    try:
+        # Create temp file for Firebase credentials
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp:
+            json.dump(json.loads(st.secrets["firebase_credentials"]), temp)
+            temp_path = temp.name
+        
+        cred = credentials.Certificate(temp_path)
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': st.secrets["firebase"]["storage_bucket"]
+        })
+        os.unlink(temp_path)  # Delete temp file
+    except Exception as e:
+        st.error(f"Firebase initialization failed: {str(e)}")
+        st.stop()
+
 bucket = storage.bucket()
 
-# Local storage (for fallback or previewing)
+# Cloudinary Configuration
+cloudinary.config(
+    cloud_name=st.secrets["cloudinary"]["cloud_name"],
+    api_key=st.secrets["cloudinary"]["api_key"],
+    api_secret=st.secrets["cloudinary"]["api_secret"]
+)
+
+# Local storage
 STORAGE_FOLDER = "cloud_storage"
 os.makedirs(STORAGE_FOLDER, exist_ok=True)
 
@@ -40,13 +57,6 @@ class StorageBackend:
     def get_image_data(self, filename): pass
 
 class CloudinaryStorage(StorageBackend):
-    def __init__(self):
-        cloudinary.config(
-            cloud_name=st.secrets["cloudinary"]["cloud_name"],
-            api_key=st.secrets["cloudinary"]["api_key"],
-            api_secret=st.secrets["cloudinary"]["api_secret"]
-        )
-
     def exists(self, filename):
         return False
 
@@ -278,17 +288,13 @@ def main():
                     st.session_state.authenticated = True
                     st.session_state.username = username
                     st.success(f"Welcome, {username}!")
-
-                    # 🔄 Cleanup invalid image links on login
                     cleanup_invalid_images(username)
                 else:
                     st.error("Authentication failed")
 
         if st.session_state.get("authenticated", False):
             st.write(f"Logged in as: {st.session_state.username}")
-            logout_button = st.button("Logout")
-
-            if logout_button:
+            if st.button("Logout"):
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()
@@ -316,7 +322,6 @@ def main():
 
         with tab2:
             st.header("Your Uploaded Images")
-
             if st.button("🔄 Cleanup Broken Links"):
                 cleanup_invalid_images(st.session_state.username)
                 st.success("Cleaned up broken image links.")
@@ -342,7 +347,6 @@ def main():
                             st.markdown(f"[Open]({public_url})", unsafe_allow_html=True)
                         except Exception as e:
                             st.error(f"Error displaying image: {str(e)}")
-
     else:
         st.info("Please login or register to use the app.")
 
