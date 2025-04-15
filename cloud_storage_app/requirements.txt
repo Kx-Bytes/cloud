@@ -1,6 +1,7 @@
 streamlit
 Pillow
 firebase-admin
-pymongo
+pymongo[srv]>=4.3.3
+certifi>=2022.12.7
 cloudinary
 requests
