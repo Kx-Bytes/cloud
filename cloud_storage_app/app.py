@@ -3,10 +3,10 @@ import hashlib
 import streamlit as st
 from PIL import Image
 import io
-import json
-import tempfile
+
 import firebase_admin
 from firebase_admin import credentials, storage
+
 from pymongo import MongoClient
 import cloudinary
 import cloudinary.uploader
@@ -19,48 +19,14 @@ mongo_db = client["cloud_storage_db"]
 hashes_collection = mongo_db["image_hashes"]
 
 # Firebase Initialization
-# Firebase Initialization
 if not firebase_admin._apps:
-    try:
-        # Create credentials dictionary from secrets
-        firebase_config = {
-            "type": st.secrets["firebase_credentials"]["type"],
-            "project_id": st.secrets["firebase_credentials"]["project_id"],
-            "private_key_id": st.secrets["firebase_credentials"]["private_key_id"],
-            "private_key": st.secrets["firebase_credentials"]["private_key"],
-            "client_email": st.secrets["firebase_credentials"]["client_email"],
-            "client_id": st.secrets["firebase_credentials"]["client_id"],
-            "auth_uri": st.secrets["firebase_credentials"]["auth_uri"],
-            "token_uri": st.secrets["firebase_credentials"]["token_uri"],
-            "auth_provider_x509_cert_url": st.secrets["firebase_credentials"]["auth_provider_x509_cert_url"],
-            "client_x509_cert_url": st.secrets["firebase_credentials"]["client_x509_cert_url"],
-            "universe_domain": st.secrets["firebase_credentials"]["universe_domain"]
-        }
-        
-        # Create temp file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp:
-            json.dump(firebase_config, temp)
-            temp_path = temp.name
-        
-        cred = credentials.Certificate(temp_path)
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': st.secrets["firebase"]["storage_bucket"]
-        })
-        os.unlink(temp_path)  # Clean up temp file
-    except Exception as e:
-        st.error(f"Firebase initialization failed: {str(e)}")
-        st.stop()
-
+    cred = credentials.Certificate(io.StringIO(st.secrets["firebase"]["private_key"]))
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': st.secrets["firebase"]["storage_bucket"]
+    })
 bucket = storage.bucket()
 
-# Cloudinary Configuration
-cloudinary.config(
-    cloud_name=st.secrets["cloudinary"]["cloud_name"],
-    api_key=st.secrets["cloudinary"]["api_key"],
-    api_secret=st.secrets["cloudinary"]["api_secret"]
-)
-
-# Local storage
+# Local storage (for fallback or previewing)
 STORAGE_FOLDER = "cloud_storage"
 os.makedirs(STORAGE_FOLDER, exist_ok=True)
 
@@ -73,6 +39,13 @@ class StorageBackend:
     def get_image_data(self, filename): pass
 
 class CloudinaryStorage(StorageBackend):
+    def __init__(self):
+        cloudinary.config(
+            cloud_name=st.secrets["cloudinary"]["cloud_name"],
+            api_key=st.secrets["cloudinary"]["api_key"],
+            api_secret=st.secrets["cloudinary"]["api_secret"]
+        )
+
     def exists(self, filename):
         return False
 
@@ -304,67 +277,15 @@ def main():
                     st.session_state.authenticated = True
                     st.session_state.username = username
                     st.success(f"Welcome, {username}!")
+
+                    # 🔄 Cleanup invalid image links on login
                     cleanup_invalid_images(username)
                 else:
                     st.error("Authentication failed")
 
         if st.session_state.get("authenticated", False):
             st.write(f"Logged in as: {st.session_state.username}")
-            if st.button("Logout"):
-                for key in list(st.session_state.keys()):
-                    del st.session_state[key]
-                st.rerun()
+            logout_button = st.button("Logout")
 
-    if st.session_state.get("authenticated", False):
-        tab1, tab2 = st.tabs(["📤 Upload Images", "📁 View Images"])
-
-        with tab1:
-            st.header("Upload New Image")
-            uploaded_file = st.file_uploader("Choose an image", type=['jpg', 'jpeg', 'png', 'gif', 'bmp'])
-            if uploaded_file is not None:
-                try:
-                    image = Image.open(uploaded_file)
-                    st.image(image, caption="Preview", width=300)
-                    if st.button("Upload Image"):
-                        uploaded_file.seek(0)
-                        result = upload_image(
-                            st.session_state.username,
-                            uploaded_file.getvalue(),
-                            uploaded_file.name
-                        )
-                        st.success(result)
-                except Exception as e:
-                    st.error(f"Error processing image: {str(e)}")
-
-        with tab2:
-            st.header("Your Uploaded Images")
-            if st.button("🔄 Cleanup Broken Links"):
-                cleanup_invalid_images(st.session_state.username)
-                st.success("Cleaned up broken image links.")
-                st.rerun()
-
-            images = get_user_images(st.session_state.username)
-            if not images:
-                st.info("You haven't uploaded any images yet.")
-            else:
-                cols = st.columns(3)
-                for idx, (img_name, public_url) in enumerate(images):
-                    with cols[idx % 3]:
-                        try:
-                            if public_url.startswith('http'):
-                                st.image(public_url, caption=img_name, use_container_width=True)
-                            else:
-                                storage_backend = LocalStorage(STORAGE_FOLDER)
-                                img_data = storage_backend.get_image_data(img_name)
-                                if img_data:
-                                    st.image(img_data, caption=img_name, use_container_width=True)
-                                else:
-                                    st.error(f"Could not load image: {img_name}")
-                            st.markdown(f"[Open]({public_url})", unsafe_allow_html=True)
-                        except Exception as e:
-                            st.error(f"Error displaying image: {str(e)}")
-    else:
-        st.info("Please login or register to use the app.")
-
-if __name__ == "__main__":
-    main()
+            if logout_button:
+                for
