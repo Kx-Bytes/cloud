@@ -14,9 +14,10 @@ import requests
 import certifi  # Add this import at the top of your file
 from pymongo import MongoClient
 
+# MongoDB Initialization
+# MongoDB Initialization
 st.set_page_config(page_title="Cloud Storage App", page_icon="☁️", layout="wide")
-# MongoDB Initialization
-# MongoDB Initialization
+
 MONGO_URI = st.secrets["mongo_uri"]
 try:
     client = MongoClient(
@@ -304,9 +305,7 @@ def get_user_images(username):
     return []
 
 # ==== Main App ====
-
 def main():
-    st.set_page_config(page_title="Cloud Storage App", page_icon="☁️", layout="wide")
     st.title("☁️ Cloud Storage with Firebase & Cloudinary")
 
     if "authenticated" not in st.session_state:
